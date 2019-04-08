@@ -1,4 +1,5 @@
 # SetRegForOffice2016Bug
+## 概要
 Microsoft Office 2016のAccessにおいて、ネットワーク上に配置したデータベースが頻繁に破損してしまう問題における一時的な対処を行います。  
 
 Accessを利用する多数の人間は必ずしも技術的なスキルを十分に持ち合わせている訳では無い為、  
@@ -12,3 +13,15 @@ Accessを利用する多数の人間は必ずしも技術的なスキルを十�
 
 https://answers.microsoft.com/en-us/msoffice/forum/all/access-database-is-getting-corrupt-again-and-again/d3fcc0a2-7d35-4a09-9269-c5d93ad0031d?page=15
 
+## 使い方
+管理者権限で起動したコマンドプロンプトからbatを実行してください。  
+
+```console
+$ SetRegForOffice2016Bug.bat
+```
+
+その他詳しい使い方は「/?」オプションで確認できます。  
+
+```console
+$ SetRegForOffice2016Bug.bat /?
+```
