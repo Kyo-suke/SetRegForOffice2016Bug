@@ -1,4 +1,11 @@
 @echo off
+rem 定数定義
+rem 対象レジストリ値の場所定義
+set REG_KEY_TARGET=HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters
+set REG_VAL_FILEINFOCACHELIFETIME=FileInfoCacheLifetime
+set REG_VAL_FILENOTFOUNDCACHELIFETIME=FileNotFoundCacheLifetime
+set REG_VAL_DIRECTORYCACHELIFETIME=DirectoryCacheLifetime
+
 rem 管理者権限で実行していない場合は実行不可
 openfiles > nul
 if %ERRORLEVEL% == 1 (
@@ -6,25 +13,37 @@ if %ERRORLEVEL% == 1 (
     exit /b 0
 )
 
-rem オプション引数の解析
-for %%f in (%*) do (
-    rem usage
-    if "%%f" == "/h" (
-        goto usage
-    )
+rem コマンドオプション引数の解析
+:check_option
+if "%1" == "" (
+    goto main
 )
-goto main
+
+if "%1" == "/?" (
+    goto usage
+)
+if "%1" == "/restore" (
+    goto restore
+)
+shift
+goto check_option
 
 rem ----------------------------------------------------------
 rem 使い方の表示
 rem ----------------------------------------------------------
 :usage
-@echo %0 [/h]
+@echo.
+@echo %0 [/?] [/restore ファイルパス]
+@echo.
 @echo   Office2016 Accessにおいてネットワーク上のファイルを実行した場合に
 @echo   データベースが破損する現象の一時対処として、レジストリ変更を行います。
 @echo   詳しくは以下のスレッドの情報を確認してください。
 @echo   https://answers.microsoft.com/en-us/msoffice/forum/all/access-database-is-getting-corrupt-again-and-again/d3fcc0a2-7d35-4a09-9269-c5d93ad0031d?page=15
-@echo   /h    この使い方を表示します。
+@echo.
+@echo   /restore ファイルパス
+@echo     バックアップファイルからレジストリを復元します。
+@echo     ファイルパスには復元に利用するファイルを指定します。 
+@echo.
 exit /b 0
 
 rem ----------------------------------------------------------
@@ -32,12 +51,6 @@ rem メイン処理
 rem ----------------------------------------------------------
 :main
 setlocal enabledelayedexpansion
-
-rem 対象レジストリ値の場所定義
-set REG_KEY_TARGET=HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters
-set REG_VAL_FILEINFOCACHELIFETIME=FileInfoCacheLifetime
-set REG_VAL_FILENOTFOUNDCACHELIFETIME=FileNotFoundCacheLifetime
-set REG_VAL_DIRECTORYCACHELIFETIME=DirectoryCacheLifetime
 
 rem REG_DWORD
 set /a FILEINFOCACHELIFETIME=nul
@@ -77,19 +90,19 @@ rem 取得したレジストリ値を表示
 @echo   %REG_KEY_TARGET%
 @echo registory value: 
 if %FILEINFOCACHELIFETIME% == 0 (
-    @echo   %REG_VAL_FILEINFOCACHELIFETIME%     = ^(not set^) ^=^> %SET_VAL_FILEINFOCACHELIFETIME%
+    @echo   %REG_VAL_FILEINFOCACHELIFETIME%     = ^(not set^) ^=^> 0x%SET_VAL_FILEINFOCACHELIFETIME%
 ) else (
-    @echo   %REG_VAL_FILEINFOCACHELIFETIME%     = %FILEINFOCACHELIFETIME% ^=^> %SET_VAL_FILEINFOCACHELIFETIME%
+    @echo   %REG_VAL_FILEINFOCACHELIFETIME%     = %FILEINFOCACHELIFETIME% ^=^> 0x%SET_VAL_FILEINFOCACHELIFETIME%
 )
 if %FILENOTFOUNDCACHELIFETIME% == 0 (
-    @echo   %REG_VAL_FILENOTFOUNDCACHELIFETIME% = ^(not set^) ^=^> %SET_VAL_FILENOTFOUNDCACHELIFETIME%
+    @echo   %REG_VAL_FILENOTFOUNDCACHELIFETIME% = ^(not set^) ^=^> 0x%SET_VAL_FILENOTFOUNDCACHELIFETIME%
 ) else (
-    @echo   %REG_VAL_FILENOTFOUNDCACHELIFETIME% = %FILENOTFOUNDCACHELIFETIME% ^=^> %SET_VAL_FILENOTFOUNDCACHELIFETIME%
+    @echo   %REG_VAL_FILENOTFOUNDCACHELIFETIME% = %FILENOTFOUNDCACHELIFETIME% ^=^> 0x%SET_VAL_FILENOTFOUNDCACHELIFETIME%
 )
 if %DIRECTORYCACHELIFETIME% == 0 (
-    @echo   %REG_VAL_DIRECTORYCACHELIFETIME%    = ^(not set^) ^=^> %SET_VAL_DIRECTORYCACHELIFETIME%
+    @echo   %REG_VAL_DIRECTORYCACHELIFETIME%    = ^(not set^) ^=^> 0x%SET_VAL_DIRECTORYCACHELIFETIME%
 ) else (
-    @echo   %REG_VAL_DIRECTORYCACHELIFETIME%    = %DIRECTORYCACHELIFETIME% ^=^> %SET_VAL_DIRECTORYCACHELIFETIME%
+    @echo   %REG_VAL_DIRECTORYCACHELIFETIME%    = %DIRECTORYCACHELIFETIME% ^=^> 0x%SET_VAL_DIRECTORYCACHELIFETIME%
 )
 @echo ===============================================================
 
@@ -109,7 +122,7 @@ if not %USER_INPUT%==Yes (
 rem registory backup
 @echo レジストリ設定のバックアップを行います。
 rem レジストリバックアップファイル
-set REG_BUCKUP_FILE=reg_buckup_%date:~0,4%%date:~5,2%%date:~8,2%
+set REG_BUCKUP_FILE=reg_buckup_%date:~0,4%%date:~5,2%%date:~8,2%.hiv
 reg save %REG_KEY_TARGET% %REG_BUCKUP_FILE%
 
 rem set registory
@@ -129,7 +142,47 @@ if not %ERRORLEVEL% == 0 (
     exit /b 1
 )
 
+@echo.
 @echo レジストリの変更が完了しました。
+@echo 反映には再起動が必要です。
+
+endlocal
+exit /b 0
+
+rem ----------------------------------------------------------
+rem restore処理
+rem ----------------------------------------------------------
+:restore
+setlocal enabledelayedexpansion
+
+rem restoreで利用するファイルの存在チェック
+if "%2" == "" (
+    goto usage
+    exit /b 1
+)
+
+set RESTORE_FILE_PATH=%2
+if not exist %RESTORE_FILE_PATH% (
+    @echo バックアップファイルが存在しません。^("%2"^)
+    exit /b 1
+)
+
+@echo バックアップファイルを利用してレジストリ状態を復元します。
+set /P USER_INPUT=よろしいですか^? [Yes/No]
+if not %USER_INPUT%==Yes (
+    @echo 処理を中断します。
+    exit /b 0
+)
+
+rem レジストリの復元
+reg restore %REG_KEY_TARGET% %RESTORE_FILE_PATH%
+if not %ERRORLEVEL% == 0 (
+    @echo レジストリの復元に失敗しました。
+    exit /b 1
+)
+
+@echo.
+@echo レジストリの復元が完了しました。
 @echo 反映には再起動が必要です。
 
 endlocal
