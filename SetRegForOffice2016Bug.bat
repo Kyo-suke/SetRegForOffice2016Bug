@@ -17,6 +17,7 @@ rem 管理者権限で実行していない場合は実行不可
 openfiles > nul
 if %ERRORLEVEL% == 1 (
     echo このバッチファイルを利用するには管理者権限で実行する必要があります。
+    pause
     exit /b 0
 )
 
@@ -68,6 +69,7 @@ setlocal enabledelayedexpansion
 set /P USER_INPUT=よろしいですか^? [Yes/No] ^> 
 if not %USER_INPUT%==Yes (
     @echo 処理を中断します。
+    pause
     exit /b 0
 )
 
@@ -147,6 +149,7 @@ if not %DIRECTORYCACHELIFETIME% == %SET_VAL_DIRECTORYCACHELIFETIME% ( set /a IS_
 if not %DISABLELEASING% == %SET_VAL_DISABLELEASING% ( set /a IS_CHANGE_NECESSARY=1 )
 if %IS_CHANGE_NECESSARY% == 0 (
     @echo レジストリの変更を行う必要がありませんでした。
+    pause
     exit /b 0
 )
 
@@ -154,6 +157,7 @@ if %IS_CHANGE_NECESSARY% == 0 (
 set /P USER_INPUT=よろしいですか^? [Yes/No] ^> 
 if not %USER_INPUT%==Yes (
     @echo 処理を中断します。
+    pause
     exit /b 0
 )
 
@@ -163,29 +167,36 @@ rem レジストリバックアップファイル
 set REG_BACKUP_FILE_LANMANWORKSTATION=%REG_BACKUP_FILENAME_LANMANWORKSTATION%%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%.hiv
 reg save %REG_KEY_LANMANWORKSTATION% %REG_BACKUP_FILE_LANMANWORKSTATION% || (
     @echo レジストリのバックアップに失敗しました。^(%REG_KEY_LANMANWORKSTATION%^)
+    pause
     exit /b 1
 )
 set REG_BACKUP_FILE_LANMANSERVER=%REG_BACKUP_FILENAME_LANMANSERVER%%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%%time:~6,2%.hiv
 reg save %REG_KEY_LANMANSERVER% %REG_BACKUP_FILE_LANMANSERVER% || (
     @echo レジストリのバックアップに失敗しました。^(%REG_KEY_LANMANSERVER%^)
+    pause
     exit /b 1
 )
 
 rem set registory
 reg add %REG_KEY_LANMANWORKSTATION% /v %REG_VAL_FILEINFOCACHELIFETIME% /t REG_DWORD /d %SET_VAL_FILEINFOCACHELIFETIME% || (
     @echo レジストリ^(%REG_VAL_FILEINFOCACHELIFETIME%^)の変更に失敗しました。
+    pause
     exit /b 1
 )
 reg add %REG_KEY_LANMANWORKSTATION% /v %REG_VAL_FILENOTFOUNDCACHELIFETIME% /t REG_DWORD /d %SET_VAL_FILENOTFOUNDCACHELIFETIME% || (
     @echo レジストリ^(%REG_VAL_FILENOTFOUNDCACHELIFETIME%^)の変更に失敗しました。
+    pause
     exit /b 1
 )
 reg add %REG_KEY_LANMANWORKSTATION% /v %REG_VAL_DIRECTORYCACHELIFETIME% /t REG_DWORD /d %SET_VAL_DIRECTORYCACHELIFETIME% || (
     @echo レジストリ^(%REG_VAL_DIRECTORYCACHELIFETIME%^)の変更に失敗しました。
+    pause
     exit /b 1
 )
 reg add %REG_KEY_LANMANSERVER% /v %REG_VAL_DISABLELEASING% /t REG_DWORD /d %SET_VAL_DISABLELEASING% || (
     @echo レジストリ^(%REG_VAL_DISABLELEASING%^)の変更に失敗しました。
+    pause
+    exit /b 1
 )
 
 @echo.
@@ -193,6 +204,7 @@ reg add %REG_KEY_LANMANSERVER% /v %REG_VAL_DISABLELEASING% /t REG_DWORD /d %SET_
 @echo 反映には再起動が必要です。
 
 endlocal
+pause
 exit /b 0
 
 rem ----------------------------------------------------------
@@ -213,12 +225,14 @@ for %%f in (%*) do (
         rem バックアップファイルの存在チェック
         if not exist %%f (
             @echo バックアップファイルが存在しません。^("%%f"^)
+            pause
             exit /b 1
         )
         rem バックアップファイル名のチェック
         @echo %%f | findstr /r /b "%REG_BACKUP_FILENAME_LANMANWORKSTATION%" > nul 2>&1 || (
             @echo %%f | findstr /b "%REG_BACKUP_FILENAME_LANMANSERVER%" > nul 2>&1 || (
                 @echo バックアップファイル名が不正です。^("%%f"^)
+                pause
                 exit /b 1
             )
         )
@@ -229,6 +243,7 @@ for %%f in (%*) do (
 set /P USER_INPUT=よろしいですか^? [Yes/No] ^> 
 if not %USER_INPUT%==Yes (
     @echo 処理を中断します。
+    pause
     exit /b 0
 )
 
@@ -241,6 +256,7 @@ for %%f in (%*) do (
             reg restore %REG_KEY_LANMANWORKSTATION% %%f
             if not %ERRORLEVEL% == 0 (
                 @echo レジストリの復元に失敗しました。
+                pause
                 exit /b 1
             )
         )
@@ -249,6 +265,7 @@ for %%f in (%*) do (
             reg restore %REG_KEY_LANMANSERVER% %%f
             if not %ERRORLEVEL% == 0 (
                 @echo レジストリの復元に失敗しました。
+                pause
                 exit /b 1
             )
         )
@@ -260,4 +277,5 @@ for %%f in (%*) do (
 @echo 反映には再起動が必要です。
 
 endlocal
+pause
 exit /b 0
